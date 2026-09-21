@@ -22,12 +22,31 @@ jobs:
       # - name: Run tests
       #   run: pytest -v
 
-  build-image:
+  build-and-push:
     runs-on: ubuntu-latest
     needs: test
     steps:
       - uses: actions/checkout@v4
 
+      - name: Prepare image name
+        run: |
+          OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "IMAGE=ghcr.io/$OWNER_LOWER/task-api" >> $GITHUB_ENV
+
+      - name: Log in to GHCR
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
       # TODO: uncomment once a Dockerfile exists
-      # - name: Build Docker image
-      #   run: docker build -t task-api:${{ github.sha }} .
+      # - name: Build and push image
+      #   uses: docker/build-push-action@v5
+      #   with:
+      #     context: .
+      #     push: ${{ github.event_name == 'push' }}
+      #     tags: |
+      #       ${{ env.IMAGE }}:${{ github.sha }}
+      #       ${{ env.IMAGE }}:latest
