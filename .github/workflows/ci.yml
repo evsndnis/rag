@@ -14,11 +14,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
 
+      # TODO: uncomment once requirements.txt / tests exist
       # - name: Install dependencies
       #   run: pip install -r requirements.txt
-
+      #
       # - name: Run tests
       #   run: pytest -v
 
@@ -28,5 +28,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # TODO: uncomment once a Dockerfile exists
       # - name: Build Docker image
       #   run: docker build -t task-api:${{ github.sha }} .
