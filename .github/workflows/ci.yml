@@ -15,12 +15,11 @@ jobs:
         with:
           python-version: "3.12"
 
-      # TODO: uncomment once requirements.txt / tests exist
-      # - name: Install dependencies
-      #   run: pip install -r requirements.txt
-      #
-      # - name: Run tests
-      #   run: pytest -v
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        run: pytest -v
 
   build-and-push:
     runs-on: ubuntu-latest
@@ -31,7 +30,7 @@ jobs:
       - name: Prepare image name
         run: |
           OWNER_LOWER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          echo "IMAGE=ghcr.io/$OWNER_LOWER/task-api" >> $GITHUB_ENV
+          echo "IMAGE=ghcr.io/$OWNER_LOWER/rag-service" >> $GITHUB_ENV
 
       - name: Log in to GHCR
         if: github.event_name == 'push'
@@ -41,12 +40,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_TOKEN }}
 
-      # TODO: uncomment once a Dockerfile exists
-      # - name: Build and push image
-      #   uses: docker/build-push-action@v5
-      #   with:
-      #     context: .
-      #     push: ${{ github.event_name == 'push' }}
-      #     tags: |
-      #       ${{ env.IMAGE }}:${{ github.sha }}
-      #       ${{ env.IMAGE }}:latest
+      - name: Build and push image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: ${{ github.event_name == 'push' }}
+          tags: |
+            ${{ env.IMAGE }}:${{ github.sha }}
+            ${{ env.IMAGE }}:latest
