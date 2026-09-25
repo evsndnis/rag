@@ -4,14 +4,17 @@
 вместе с retriever'ом (он отдельно нужен для оценки в Шаге 8).
 `format_docs_with_sources()` склеивает топ-k чанков в нумерованный
 контекст, чтобы LLM могла цитировать источники как `[1]`, `[2]`.
+При `rerank=True` между retriever'ом и форматированием встаёт cross-encoder:
+из `rerank_fetch_k` кандидатов остаются `rerank_top_n` лучших.
 """
 from langchain_core.documents import Document
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnableLambda, RunnablePassthrough
+from langchain_core.runnables import Runnable, RunnableLambda, RunnablePassthrough
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
+from sentence_transformers import CrossEncoder
 
 from app.config import settings
 from app.llm import get_llm
@@ -60,10 +63,40 @@ def format_docs_with_sources(docs: list[Document]) -> str:
     return "\n\n---\n\n".join(lines)
 
 
-def build_rag_chain():
-    """Собрать LCEL-цепочку и вернуть пару (chain, retriever)."""
+def make_reranker(model_name: str, top_n: int):
+    """Функция docs → docs: переоценить пары (запрос, чанк) cross-encoder'ом, оставить top_n."""
+    model = CrossEncoder(model_name)
+
+    def rerank(inputs: dict) -> list[Document]:
+        query, docs = inputs["question"], inputs["docs"]
+        if not docs:
+            return []
+        scores = model.predict([(query, doc.page_content) for doc in docs])
+        ranked = sorted(zip(docs, scores), key=lambda pair: pair[1], reverse=True)
+        return [doc for doc, _ in ranked[:top_n]]
+
+    return rerank
+
+
+def build_retriever(rerank: bool) -> Runnable:
+    """Retriever: вопрос → список Document (с reranking'ом, если он включён)."""
     vectorstore = get_vectorstore()
-    retriever = vectorstore.as_retriever(search_kwargs={"k": settings.top_k})
+    if not rerank:
+        return vectorstore.as_retriever(search_kwargs={"k": settings.top_k})
+
+    candidates = vectorstore.as_retriever(search_kwargs={"k": settings.rerank_fetch_k})
+    reranker = make_reranker(settings.rerank_model, settings.rerank_top_n)
+    return {"question": RunnablePassthrough(), "docs": candidates} | RunnableLambda(reranker)
+
+
+def build_rag_chain(rerank: bool | None = None):
+    """Собрать LCEL-цепочку и вернуть пару (chain, retriever).
+
+    `rerank=None` берёт значение из `settings.rerank_enabled`.
+    """
+    if rerank is None:
+        rerank = settings.rerank_enabled
+    retriever = build_retriever(rerank)
     llm = get_llm()
     prompt = ChatPromptTemplate.from_template(SYSTEM_PROMPT)
 

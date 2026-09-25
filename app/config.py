@@ -26,5 +26,11 @@ class Settings(BaseSettings):
     embedding_dim: int = 384
     normalize_embeddings: bool = True
 
+    # Reranker (cross-encoder): достаём rerank_fetch_k кандидатов, оставляем rerank_top_n.
+    rerank_enabled: bool = False
+    rerank_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    rerank_fetch_k: int = 20
+    rerank_top_n: int = 5
+
 
 settings = Settings()
