@@ -51,6 +51,8 @@ retriever достаёт top-20 чанков, cross-encoder заново оце�
 Включить: `RERANK_ENABLED=true` в `.env`. Параметры: `RERANK_MODEL`, `RERANK_FETCH_K` (по умолчанию 20),
 `RERANK_TOP_N` (по умолчанию 5). Результаты: [`notebooks/rag_metrics_rerank.json`](notebooks/rag_metrics_rerank.json).
 
+Слабые стороны системы и пути доработки: [`LIMITATIONS.md`](LIMITATIONS.md).
+
 ## Локальный запуск
 
 Нужен ключ OpenRouter (или любого OpenAI-совместимого провайдера):
